@@ -117,6 +117,31 @@ func TestMultipleRootsAndSpecialFiles(t *testing.T) {
 	}
 }
 
+func TestCopyWithContextStopsBetweenChunks(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	reader := strings.NewReader(strings.Repeat("x", 2*1024*1024))
+	writer := cancelAfterFirstWrite{cancel: cancel}
+	written, err := copyWithContext(ctx, &writer, reader)
+	if err != context.Canceled {
+		t.Fatalf("error = %v, want context.Canceled", err)
+	}
+	if written != 1024*1024 || writer.writes != 1 {
+		t.Fatalf("written=%d writes=%d", written, writer.writes)
+	}
+}
+
+type cancelAfterFirstWrite struct {
+	cancel context.CancelFunc
+	writes int
+}
+
+func (w *cancelAfterFirstWrite) Write(data []byte) (int, error) {
+	w.writes++
+	w.cancel()
+	return len(data), nil
+}
+
 func writeTestFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

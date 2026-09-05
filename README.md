@@ -28,7 +28,7 @@ Flags:
 
 Symlinks and all non-regular special files are skipped. Overlapping or duplicate roots are rejected before scanning. If a file cannot be fully hashed or changes during hashing, its row remains in the CSV with a blank hash and `read_error` status. If interrupted, rows already written remain a valid CSV inventory.
 
-For the read-only guarantee, the output CSV must be outside every scan root; `dupalia` rejects an output path inside a scanned directory.
+For the read-only guarantee, the output CSV must be outside every scan root; `dupalia` rejects an output path inside a scanned directory. Ctrl-C and SIGTERM stop traversal, interrupt hashing at the next 1 MiB streaming chunk, flush the partial CSV, and return a non-zero exit status.
 
 ## CSV schema
 

@@ -194,6 +194,9 @@ type fileJob struct {
 }
 
 func (s *scanner) processFile(ctx context.Context, job fileJob) {
+	if ctx.Err() != nil {
+		return
+	}
 	row := recordFor(s.hostname, job)
 	if s.options.NoHash {
 		row[14], row[15] = "", "skipped"
@@ -211,8 +214,14 @@ func (s *scanner) processFile(ctx context.Context, job fileJob) {
 		return
 	}
 	h := sha256.New()
-	_, copyErr := io.Copy(h, f)
+	_, copyErr := copyWithContext(ctx, h, f)
 	closeErr := f.Close()
+	if errors.Is(copyErr, context.Canceled) {
+		s.warn("hash interrupted: %s", job.path)
+		row[15] = "read_error"
+		s.writeRow(row, job.info.Size(), false, true)
+		return
+	}
 	post, statErr := os.Stat(job.path)
 	if copyErr != nil || closeErr != nil || statErr != nil || post.Size() != job.info.Size() || !post.ModTime().Equal(job.info.ModTime()) {
 		if copyErr != nil || closeErr != nil {
@@ -228,6 +237,35 @@ func (s *scanner) processFile(ctx context.Context, job fileJob) {
 	}
 	row[14], row[15] = fmt.Sprintf("%x", h.Sum(nil)), "ok"
 	s.writeRow(row, job.info.Size(), true, false)
+}
+
+// copyWithContext hashes in fixed-size chunks, checking for cancellation
+// between reads. Its memory use stays bounded regardless of file size.
+func copyWithContext(ctx context.Context, dst io.Writer, src io.Reader) (int64, error) {
+	buffer := make([]byte, 1024*1024)
+	var written int64
+	for {
+		if err := ctx.Err(); err != nil {
+			return written, err
+		}
+		n, readErr := src.Read(buffer)
+		if n > 0 {
+			m, writeErr := dst.Write(buffer[:n])
+			written += int64(m)
+			if writeErr != nil {
+				return written, writeErr
+			}
+			if m != n {
+				return written, io.ErrShortWrite
+			}
+		}
+		if readErr == io.EOF {
+			return written, nil
+		}
+		if readErr != nil {
+			return written, readErr
+		}
+	}
 }
 
 func (s *scanner) writeRow(row []string, size int64, hashed, hashError bool) {
