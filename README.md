@@ -4,6 +4,21 @@
 
 It never changes, moves, deletes, renames, synchronizes, or otherwise modifies scanned files. It reads metadata and, unless disabled, streams file contents to calculate SHA-256 hashes.
 
+## Build a copy plan
+
+`dupalia plan` compares two inventory CSVs by SHA-256 and writes a manifest of the unique content present in a source inventory but absent from a destination inventory. It is deliberately a planning command: it never reads, copies, deletes, or changes the storage files named in either inventory.
+
+```bash
+./dupalia plan \
+  --source bigboi-20260905.csv \
+  --destination orestack-20260905.csv \
+  --output bigboi-to-orestack-plan.csv
+```
+
+Each plan row contains a verified source path, hash, size, and the number of same-hash source copies. It excludes source rows whose hashes were skipped or had read errors. If the destination inventory has `read_error` rows, those are also excluded from presence matching; rescan them before treating the plan as complete.
+
+The plan does not invent a destination path. This avoids accidentally mixing dated backup snapshots into a working directory. Use the plan to choose a destination convention (for example, a source-preserving recovery folder) and run a copy operation separately.
+
 ## Build
 
 ```bash

@@ -11,6 +11,10 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "plan" {
+		os.Exit(runPlan(os.Args[2:], os.Stdout, os.Stderr))
+	}
+
 	var output string
 	var noHash bool
 	var crossFilesystems bool
@@ -22,7 +26,7 @@ func main() {
 	flag.IntVar(&workers, "workers", 1, "number of bounded hashing workers (minimum 1)")
 	flag.IntVar(&progressEvery, "progress-every", 10000, "print progress every N files; 0 disables it")
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage: dupalia [flags] DIRECTORY [DIRECTORY ...]\n\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage: dupalia [flags] DIRECTORY [DIRECTORY ...]\n       dupalia plan --source SOURCE.csv --destination DESTINATION.csv --output PLAN.csv\n\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()

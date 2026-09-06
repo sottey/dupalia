@@ -32,3 +32,12 @@ go.work.sum
 # .vscode/
 dupalia
 codex/prompt.md
+data_files/2t_grump-20260905.csv
+.gitignore
+data_files/bigboi-missing-orestack-content.csv
+data_files/bigboi-to-orestack-plan.csv
+.gitignore
+.gitignore
+data_files/bigboi-20260905.csv
+data_files/orestack-20260905.csv
+data_files/orestack-missing-content.csv
